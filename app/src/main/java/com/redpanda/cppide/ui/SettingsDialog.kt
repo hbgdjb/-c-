@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -20,6 +23,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,6 +60,7 @@ fun SettingsDialog(
     var theme by remember { mutableStateOf(themeMode) }
     var font by remember { mutableFloatStateOf(fontSize) }
     var storageTick by remember { mutableStateOf(0) }
+    var helpPage by remember { mutableStateOf<HelpPage?>(null) }
 
     val items = remember(storageTick) { storage.items() }
     val total = remember(storageTick) { storage.total() }
@@ -84,35 +89,38 @@ fun SettingsDialog(
                 CompactChips(
                     "C++",
                     listOf("c++11" to "11", "c++14" to "14", "c++17" to "17", "c++20" to "20"),
-                    stdCpp.removePrefix("c++"),
-                    onSelect = { stdCpp = "c++$it" },
+                    selected = stdCpp,
+                    onSelect = { stdCpp = it },
+                    onHelp = { helpPage = HelpPage.CPP_STD },
                     hintFor = mapOf(
-                        "11" to "兼容性最好，旧 OJ 常用",
-                        "14" to "泛型 lambda、auto 返回类型",
-                        "17" to "结构化绑定 / if constexpr —— 推荐",
-                        "20" to "概念 / 协程，较新，部分环境支持不全"
+                        "c++11" to "兼容性最好，旧 OJ 常用",
+                        "c++14" to "泛型 lambda、auto 返回类型",
+                        "c++17" to "结构化绑定 / if constexpr —— 推荐",
+                        "c++20" to "概念 / 协程，较新，部分环境支持不全"
                     )
                 )
                 CompactChips(
                     "C",
                     listOf("c11" to "11", "c17" to "17"),
-                    stdC.removePrefix("c"),
-                    onSelect = { stdC = "c$it" },
+                    selected = stdC,
+                    onSelect = { stdC = it },
+                    onHelp = { helpPage = HelpPage.C_STD },
                     hintFor = mapOf(
-                        "11" to "兼容性好",
-                        "17" to "c11 的缺陷修复版 —— 推荐"
+                        "c11" to "兼容性好",
+                        "c17" to "c11 的缺陷修复版 —— 推荐"
                     )
                 )
                 CompactChips(
                     "优化",
                     listOf("-O0" to "0", "-O1" to "1", "-O2" to "2", "-Os" to "s"),
-                    opt.removePrefix("-O"),
-                    onSelect = { opt = "-O$it" },
+                    selected = opt,
+                    onSelect = { opt = it },
+                    onHelp = { helpPage = HelpPage.OPTIMIZE },
                     hintFor = mapOf(
-                        "0" to "编译最快、最易调试（变量值准确）",
-                        "1" to "轻量优化，编译较快",
-                        "2" to "运行速度明显提升，编译稍慢 —— 推荐",
-                        "s" to "优化体积，适合存储紧张"
+                        "-O0" to "编译最快、最易调试（变量值准确）",
+                        "-O1" to "轻量优化，编译较快",
+                        "-O2" to "运行速度明显提升，编译稍慢 —— 推荐",
+                        "-Os" to "优化体积，适合存储紧张"
                     )
                 )
 
@@ -218,6 +226,174 @@ fun SettingsDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
+
+    // ── 选项详细说明页（点设置项左边的标签进入）──
+    helpPage?.let { page ->
+        val title: String
+        val entries: List<OptEntry>
+        val current: String
+        when (page) {
+            HelpPage.CPP_STD -> {
+                title = "C++ 标准"
+                current = stdCpp
+                entries = listOf(
+                    OptEntry(
+                        "c++11", "c++11", "兼容性最好，旧 OJ 常用",
+                        "第一个现代化标准，引入 auto、范围 for、智能指针、右值引用。\n" +
+                            "很多旧 OJ 的编译器默认就是这个。代码用了新特性编译不过时，可以先切回它。"
+                    ),
+                    OptEntry(
+                        "c++14", "c++14", "泛型 lambda、auto 返回类型",
+                        "c++11 的小修小补，支持泛型 lambda 和 auto 返回值推导。\n" +
+                            "日常手感和 c++11 差别不大，除非明确用到新特性，否则不必专门选。"
+                    ),
+                    OptEntry(
+                        "c++17", "c++17", "结构化绑定 / if constexpr —— 推荐",
+                        "目前最通用的现代标准。支持结构化绑定 auto [a, b] = pair;、" +
+                            "if constexpr、内联变量、std::optional、std::string_view。\n" +
+                            "绝大多数 OJ 和现行教材都支持。\n\n👉 不确定选哪个就选它。"
+                    ),
+                    OptEntry(
+                        "c++20", "c++20", "概念 / 协程，较新",
+                        "最新大版本，引入概念(concepts)、协程、ranges、三路比较。\n" +
+                            "但部分 OJ 编译器支持不完整，且编译明显更慢。除非明确需要，否则不建议。"
+                    )
+                )
+            }
+            HelpPage.C_STD -> {
+                title = "C 标准"
+                current = stdC
+                entries = listOf(
+                    OptEntry(
+                        "c11", "c11", "兼容性好",
+                        "C 语言 2011 版，支持 _Generic、匿名结构体、多线程。\n对老代码兼容性最好。"
+                    ),
+                    OptEntry(
+                        "c17", "c17", "c11 的缺陷修复版 —— 推荐",
+                        "C 语言 2018 版（原计划叫 c18），只修复了 c11 的一些缺陷，没有引入新特性。\n\n" +
+                            "👉 日常写 C 选它即可，兼容性和 c11 一样好。"
+                    )
+                )
+            }
+            HelpPage.OPTIMIZE -> {
+                title = "优化级别"
+                current = opt
+                entries = listOf(
+                    OptEntry(
+                        "-O0", "-O0", "编译最快、最易调试",
+                        "不做任何优化。编译速度最快，生成的代码最容易理解，\n" +
+                            "调试时变量值完全准确（不会显示 optimized out）。\n\n👉 写作业、调代码阶段推荐。"
+                    ),
+                    OptEntry(
+                        "-O1", "-O1", "轻量优化，编译较快",
+                        "做基础优化：去掉无用代码、简单内联、合并重复计算。\n" +
+                            "编译时间和运行效果都比较平衡，日常使用也可以。"
+                    ),
+                    OptEntry(
+                        "-O2", "-O2", "运行速度明显提升 —— 推荐",
+                        "启用大部分优化：循环展开、函数内联、自动向量化等。\n" +
+                            "计算量大的程序通常有 2～5 倍提速，代价是编译慢一点、可执行文件大一点。\n" +
+                            "这是大多数 OJ 和竞赛的默认档。\n\n👉 追求程序跑得快就选它。"
+                    ),
+                    OptEntry(
+                        "-Os", "-Os", "优化体积，适合存储紧张",
+                        "在 -O2 的基础上优先减小生成文件的体积，可能牺牲一点运行速度。\n" +
+                            "只在存储空间紧张时才需要，日常很少用到。"
+                    )
+                )
+            }
+        }
+        OptionHelpDialog(
+            title = title,
+            entries = entries,
+            current = current,
+            onSelect = { v ->
+                when (page) {
+                    HelpPage.CPP_STD -> stdCpp = v
+                    HelpPage.C_STD -> stdC = v
+                    HelpPage.OPTIMIZE -> opt = v
+                }
+                helpPage = null
+            },
+            onDismiss = { helpPage = null }
+        )
+    }
+}
+
+/** 一个可选选项的详细说明 */
+private data class OptEntry(
+    val value: String,
+    val label: String,
+    val shortDesc: String,
+    val longDesc: String
+)
+
+private enum class HelpPage { CPP_STD, C_STD, OPTIMIZE }
+
+/** 选项详细说明页：列出所有选项的完整解释，点选即应用 */
+@Composable
+private fun OptionHelpDialog(
+    title: String,
+    entries: List<OptEntry>,
+    current: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontSize = 17.sp) },
+        text = {
+            LazyColumn(modifier = Modifier.heightIn(max = 430.dp)) {
+                items(entries.size) { i ->
+                    val e = entries[i]
+                    val selected = e.value == current
+                    Surface(
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onSelect(e.value) }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    e.label,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (selected) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "当前使用",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Text(
+                                e.shortDesc,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                            Text(
+                                e.longDesc,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
 }
 
 @Composable
@@ -251,16 +427,35 @@ private fun CompactChips(
     values: List<Pair<String, String>>,
     selected: String,
     onSelect: (String) -> Unit,
+    onHelp: (() -> Unit)? = null,
     hintFor: Map<String, String> = emptyMap()
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                label,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(36.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .width(44.dp)
+                    .then(
+                        if (onHelp != null) {
+                            Modifier.clickable { onHelp() }
+                        } else Modifier
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    label,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (onHelp != null) {
+                    Text(
+                        " ?",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -282,7 +477,7 @@ private fun CompactChips(
                 hint,
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 36.dp, top = 1.dp)
+                modifier = Modifier.padding(start = 44.dp, top = 1.dp)
             )
         }
     }
