@@ -26,8 +26,8 @@
 **环境要求**：JDK 17、Android SDK（platform-tools / android-35 / build-tools 35.0.0）、Gradle 8.11.1
 
 ```bash
-git clone https://github.com/<你的用户名>/RedPandaAndroid.git
-cd RedPandaAndroid
+git clone "https://github.com/HBGDJB/%E5%B0%8F%E7%86%8A%E7%8C%ABc%2B%2B%E5%AE%89%E5%8D%93%E7%89%88.git"
+cd 小熊猫c++安卓版
 
 # 复制签名配置模板并填入真实值
 cp keystore.properties.template keystore.properties
