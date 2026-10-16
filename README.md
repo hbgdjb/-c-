@@ -117,4 +117,7 @@ RedPandaAndroid/
 | Jetpack Compose / AndroidX | Apache-2.0 | 界面框架 |
 | commons-compress / XZ for Java | Apache-2.0 | 首启解压工具链 |
 
-若你认为本项目侵犯了你的权益，请通过仓库 Issue 联系，我会及时处理。
+若你认为本项目侵犯了你的权益，或有任何问题与建议，欢迎联系：
+
+- **邮箱**：2931621472@qq.com
+- **仓库 Issue**：https://github.com/hbgdjb/-c-/issues

@@ -37,6 +37,15 @@ private fun openUrl(context: android.content.Context, url: String) {
     }
 }
 
+/** 调起邮件客户端发送邮件（ACTION_SENDTO + mailto:，无需任何权限） */
+private fun openEmail(context: android.content.Context, email: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email"))
+        )
+    }
+}
+
 /**
  * 「关于」对话框：按开源规范写明原作来源、许可与第三方组件。
  */
@@ -135,11 +144,20 @@ fun AboutDialog(onDismiss: () -> Unit) {
 
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
+                SectionTitle("联系方式")
+
+                LinkLine("邮箱", "2931621472@qq.com") {
+                    openEmail(context, "2931621472@qq.com")
+                }
+                LinkLine("源码仓库", "github.com/hbgdjb/-c-") {
+                    openUrl(context, "https://github.com/hbgdjb/-c-")
+                }
                 Text(
-                    "若你认为本项目侵犯了你的权益，请通过仓库 Issue 联系，我会及时处理。",
+                    "若你认为本项目侵犯了你的权益，或有任何问题与建议，" +
+                        "欢迎通过上方的邮箱或仓库 Issue 联系，我会及时处理。",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
         },
