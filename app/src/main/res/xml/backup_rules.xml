@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 以下（API 23-30）的自动备份规则。
+  排除体积大且可再生的派生数据（解压出来的编译器、编译产物、缓存），
+  只备份用户自己的源代码。
+-->
+<full-backup-content>
+    <exclude domain="file" path="ndk" />
+    <exclude domain="file" path="libs" />
+    <exclude domain="file" path="build" />
+    <exclude domain="cache" path="." />
+</full-backup-content>

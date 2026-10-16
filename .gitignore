@@ -1,0 +1,12 @@
+# 签名信息（含密码），不要提交
+keystore.properties
+
+# Gradle / 构建产物
+.gradle/
+build/
+.kotlin/
+local.properties
+
+# IDE
+.idea/
+*.iml

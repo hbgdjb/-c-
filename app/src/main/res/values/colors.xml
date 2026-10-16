@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="redpanda_primary">#C0392B</color>
+    <color name="redpanda_dark">#8E2A1F</color>
+    <color name="redpanda_bg">#FFF8F5</color>
+</resources>
