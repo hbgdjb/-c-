@@ -88,12 +88,8 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 HorizontalDivider()
                 SectionTitle("本项目")
 
-                LinkLine("源码仓库", "github.com/HBGDJB/小熊猫c++安卓版") {
-                    openUrl(
-                        context,
-                        "https://github.com/HBGDJB/" +
-                            "%E5%B0%8F%E7%86%8A%E7%8C%ABc%2B%2B%E5%AE%89%E5%8D%93%E7%89%88"
-                    )
+                LinkLine("源码仓库", "github.com/hbgdjb/-c-") {
+                    openUrl(context, "https://github.com/hbgdjb/-c-")
                 }
                 InfoLine("本项目许可", "GPL-3.0")
                 Text(
