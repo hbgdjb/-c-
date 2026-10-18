@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  工作区目录的 FileProvider 配置。
+  只开放 files/work 这一个目录，用于把代码文件分享出去。
+-->
+<paths>
+    <files-path
+        name="work"
+        path="work/" />
+</paths>

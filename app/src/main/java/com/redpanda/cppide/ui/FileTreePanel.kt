@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -77,6 +79,8 @@ fun FileTreePanel(
     root: File,
     currentFile: File?,
     onOpen: (File) -> Unit,
+    onImport: () -> Unit,
+    onShare: (File) -> Unit,
     onChanged: () -> Unit
 ) {
     val expanded = remember { mutableStateListOf<String>() }
@@ -113,6 +117,9 @@ fun FileTreePanel(
                         targetDir = root
                         dialog = DialogKind.NewDir
                     }) { Icon(Icons.Filled.CreateNewFolder, "新建文件夹", modifier = Modifier.size(20.dp)) }
+                    IconButton(onClick = onImport) {
+                        Icon(Icons.Filled.UploadFile, "导入代码", modifier = Modifier.size(20.dp))
+                    }
                     IconButton(onClick = { refresh() }) {
                         Icon(Icons.Filled.Refresh, "刷新", modifier = Modifier.size(20.dp))
                     }
@@ -151,6 +158,7 @@ fun FileTreePanel(
                         targetDir = if (row.file.isDirectory) row.file else row.file.parentFile ?: root
                         dialog = DialogKind.NewFile
                     },
+                    onShare = { onShare(row.file) },
                     onRename = { dialog = DialogKind.Rename(row.file) },
                     onDelete = { dialog = DialogKind.Delete(row.file) }
                 )
@@ -222,6 +230,7 @@ private fun FileRowItem(
     onToggle: () -> Unit,
     onOpen: () -> Unit,
     onNewFileHere: () -> Unit,
+    onShare: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -274,6 +283,13 @@ private fun FileRowItem(
                         leadingIcon = { Icon(Icons.Filled.NoteAdd, null, modifier = Modifier.size(18.dp)) },
                         onClick = { menu = false; onNewFileHere() }
                     )
+                    if (!f.isDirectory) {
+                        DropdownMenuItem(
+                            text = { Text("分享", fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp)) },
+                            onClick = { menu = false; onShare() }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("重命名", fontSize = 14.sp) },
                         leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, null, modifier = Modifier.size(18.dp)) },

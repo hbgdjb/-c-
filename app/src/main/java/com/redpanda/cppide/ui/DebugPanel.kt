@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -24,23 +27,30 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.redpanda.cppide.debugger.Breakpoint
@@ -67,7 +77,14 @@ fun DebugPanel(
     onStepOut: () -> Unit,
     onStop: () -> Unit,
     onDeleteBreakpoint: (Breakpoint) -> Unit,
+    onEditBreakpoint: (Breakpoint) -> Unit,
     onLocationClick: ((DebugLocation) -> Unit)? = null,
+    /** 命令/表达式控制台的输出历史 */
+    commandLog: List<String> = emptyList(),
+    /** 执行一条输入；raw=true 表示原始 lldb 命令，false 表示表达式求值 */
+    onCommand: (String, Boolean) -> Unit = { _, _ -> },
+    /** 程序输出（调试时底部控制台会收起，改从这里看） */
+    console: List<String> = emptyList(),
     onDismiss: () -> Unit
 ) {
     var tab by remember { mutableIntStateOf(0) }
@@ -142,11 +159,11 @@ fun DebugPanel(
 
             // ── 标签页 ──
             TabRow(selectedTabIndex = tab, modifier = Modifier.height(36.dp)) {
-                listOf("断点", "变量", "调用栈").forEachIndexed { i, t ->
+                listOf("断点", "变量", "调用栈", "命令", "输出").forEachIndexed { i, t ->
                     Tab(
                         selected = tab == i,
                         onClick = { tab = i },
-                        text = { Text(t, fontSize = 12.sp) },
+                        text = { Text(t, fontSize = 11.sp, maxLines = 1) },
                         modifier = Modifier.height(36.dp)
                     )
                 }
@@ -160,10 +177,127 @@ fun DebugPanel(
                     .background(MaterialTheme.colorScheme.surface)
             ) {
                 when (tab) {
-                    0 -> BreakpointList(breakpoints, onDeleteBreakpoint)
+                    0 -> BreakpointList(breakpoints, onDeleteBreakpoint, onEditBreakpoint)
                     1 -> VariableList(variables)
                     2 -> StackList(stack, onLocationClick)
+                    3 -> CommandPane(commandLog, phase, onCommand)
+                    else -> OutputPane(console)
                 }
+            }
+        }
+    }
+}
+
+/** 程序输出（调试时底部控制台会收起，改从这里看） */
+@Composable
+private fun OutputPane(console: List<String>) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(console.size) {
+        if (console.isNotEmpty()) runCatching { listState.animateScrollToItem(console.size - 1) }
+    }
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        if (console.isEmpty()) {
+            item {
+                Text(
+                    "暂无输出。程序运行 / 调试的输出会显示在这里。",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        items(console.size) { i ->
+            Text(
+                console[i],
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+/** 调试命令 / 表达式求值面板 */
+@Composable
+private fun CommandPane(
+    log: List<String>,
+    phase: DebugPhase,
+    onCommand: (String, Boolean) -> Unit
+) {
+    var input by remember { mutableStateOf("") }
+    var rawMode by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(log.size) {
+        if (log.isNotEmpty()) runCatching { listState.animateScrollToItem(log.size - 1) }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(
+                selected = !rawMode,
+                onClick = { rawMode = false },
+                label = { Text("表达式", fontSize = 11.sp) }
+            )
+            Spacer(Modifier.width(6.dp))
+            FilterChip(
+                selected = rawMode,
+                onClick = { rawMode = true },
+                label = { Text("lldb 命令", fontSize = 11.sp) }
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                when {
+                    rawMode -> "如 frame variable / bt"
+                    phase == DebugPhase.STOPPED -> "如 a + b 或 x = 5"
+                    else -> "求值需先暂停"
+                },
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+                placeholder = {
+                    Text(if (rawMode) "lldb 命令" else "表达式", fontSize = 11.sp)
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
+            TextButton(
+                onClick = {
+                    if (input.isNotBlank()) {
+                        onCommand(input, rawMode)
+                        input = ""
+                    }
+                }
+            ) { Text("执行", fontSize = 12.sp) }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+        LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f)) {
+            if (log.isEmpty()) {
+                item {
+                    Text(
+                        "输入表达式求值（如 a + b），\n或切到「lldb 命令」直接敲命令（如 frame variable）。",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
+                }
+            }
+            items(log.size) { i ->
+                Text(
+                    log[i],
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -188,16 +322,20 @@ private fun DbgIcon(
 @Composable
 private fun BreakpointList(
     breakpoints: List<Breakpoint>,
-    onDelete: (Breakpoint) -> Unit
+    onDelete: (Breakpoint) -> Unit,
+    onEdit: (Breakpoint) -> Unit
 ) {
     if (breakpoints.isEmpty()) {
-        EmptyHint("还没有断点\n在编辑时点击工具栏的「断点」按钮在当前行添加")
+        EmptyHint("还没有断点\n在编辑时点工具栏的「断点」按钮在当前行添加（可设条件）")
         return
     }
     LazyColumn {
         items(breakpoints) { bp ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onEdit(bp) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -213,7 +351,21 @@ private fun BreakpointList(
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (bp.condition.isNotBlank()) {
+                        Text(
+                            "条件：${bp.condition}",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
+                Text(
+                    "改条件",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
                 IconButton(
                     onClick = { onDelete(bp) },
                     modifier = Modifier.size(32.dp)

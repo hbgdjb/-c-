@@ -17,9 +17,13 @@ import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FormatIndentDecrease
 import androidx.compose.material.icons.filled.FormatIndentIncrease
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.ManageSearch
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
@@ -53,6 +57,10 @@ fun EditorToolbar(
     onFormat: () -> Unit,
     onSnippets: () -> Unit,
     onGotoDefinition: () -> Unit,
+    onInfo: () -> Unit,
+    onReferences: () -> Unit,
+    onRename: () -> Unit,
+    onTasks: () -> Unit,
     onBreakpoint: () -> Unit,
     onSave: () -> Unit,
     symbolBarOn: Boolean,
@@ -75,6 +83,10 @@ fun EditorToolbar(
             BarIcon(Icons.Filled.AutoFixHigh, "格式化", onFormat)
             BarIcon(Icons.Filled.Code, "插入片段", onSnippets)
             BarIcon(Icons.Filled.ArrowForward, "跳转定义", onGotoDefinition)
+            BarIcon(Icons.Filled.ManageSearch, "查找引用", onReferences)
+            BarIcon(Icons.Filled.DriveFileRenameOutline, "重命名符号", onRename)
+            BarIcon(Icons.Filled.Info, "查看类型/签名", onInfo)
+            BarIcon(Icons.Filled.FormatListBulleted, "任务与书签", onTasks)
             BarIcon(Icons.Filled.Circle, "添加/删除断点", onBreakpoint)
             BarIcon(Icons.Filled.Save, "保存", onSave)
             BarIcon(

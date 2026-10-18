@@ -1,6 +1,7 @@
 package com.redpanda.cppide.debugger
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.redpanda.cppide.compiler.CompileOptions
@@ -10,7 +11,13 @@ import com.redpanda.cppide.compiler.ToolchainManager
 import java.io.File
 
 /** 断点 */
-data class Breakpoint(val id: Int, val file: String, val line: Int)
+data class Breakpoint(
+    val id: Int,
+    val file: String,
+    val line: Int,
+    /** 条件表达式，空表示无条件命中 */
+    val condition: String = ""
+)
 
 /** 调用栈帧 */
 data class StackFrame(
@@ -56,7 +63,8 @@ class DebugController(
 
     val driver = LldbDriver(toolchain)
 
-    private val breakpoints = mutableListOf<Breakpoint>()
+    // 用可观察列表：断点增删后调试面板的列表能立刻刷新
+    private val breakpoints = mutableStateListOf<Breakpoint>()
     private var program: File? = null
 
     var phase by mutableStateOf(DebugPhase.IDLE)
@@ -72,6 +80,8 @@ class DebugController(
     private val varRegex = Regex("""^\(([^)]*)\)\s+([A-Za-z_]\w*)\s*=\s*(.*)$""")
     private val exitCodeRegex = Regex("""Process \d+ exited with status = (-?\d+)""")
     private val stopReasonRegex = Regex("""stop reason = (.+)""")
+    /** lldb 表达式结果的 `(int) $0 = 42` 前缀 */
+    private val evalPrefixRegex = Regex("""^\([^)]*\)\s*\$?\d*\s*=\s*(.*)$""")
 
     /** 启动调试（会先用 -g 重新编译） */
     suspend fun start(
@@ -107,29 +117,59 @@ class DebugController(
         val saved = breakpoints.toList()
         breakpoints.clear()
         for (bp in saved) {
-            val out = driver.send("breakpoint set --file ${quote(bp.file)} --line ${bp.line}")
+            val out = driver.send(breakpointSetCommand(bp.file, bp.line, bp.condition))
             val id = breakpointRegex.find(out)?.groupValues?.get(1)?.toIntOrNull()
                 ?: (breakpoints.size + 1)
-            breakpoints += Breakpoint(id, bp.file, bp.line)
+            breakpoints += Breakpoint(id, bp.file, bp.line, bp.condition)
         }
         return result
+    }
+
+    /** 生成 lldb 的断点设置命令（条件可选） */
+    private fun breakpointSetCommand(file: String, line: Int, condition: String): String {
+        val sb = StringBuilder("breakpoint set --file ${quote(file)} --line $line")
+        if (condition.isNotBlank()) {
+            sb.append(" --condition ").append(quote(condition))
+        }
+        return sb.toString()
     }
 
     /**
      * 设置断点。调试器未启动时先本地记录，
      * start() 时会统一下发给 lldb。
+     * @param condition 条件表达式，如 `i == 100`；留空表示无条件命中
      */
-    suspend fun setBreakpoint(file: String, line: Int): Breakpoint? {
+    suspend fun setBreakpoint(
+        file: String,
+        line: Int,
+        condition: String = ""
+    ): Breakpoint? {
         val existing = breakpoints.find { it.file == file && it.line == line }
-        if (existing != null) return existing
+        if (existing != null) {
+            // 条件变了就更新
+            if (existing.condition != condition) {
+                if (driver.isRunning()) {
+                    driver.send("breakpoint delete ${existing.id}")
+                    val out = driver.send(breakpointSetCommand(file, line, condition))
+                    val id = breakpointRegex.find(out)?.groupValues?.get(1)?.toIntOrNull()
+                    val updated = Breakpoint(id ?: existing.id, file, line, condition)
+                    breakpoints[breakpoints.indexOf(existing)] = updated
+                    return updated
+                }
+                val updated = existing.copy(condition = condition)
+                breakpoints[breakpoints.indexOf(existing)] = updated
+                return updated
+            }
+            return existing
+        }
         if (driver.isRunning()) {
-            val out = driver.send("breakpoint set --file ${quote(file)} --line $line")
+            val out = driver.send(breakpointSetCommand(file, line, condition))
             val id = breakpointRegex.find(out)?.groupValues?.get(1)?.toIntOrNull()
-            val bp = Breakpoint(id ?: (breakpoints.size + 1), file, line)
+            val bp = Breakpoint(id ?: (breakpoints.size + 1), file, line, condition)
             breakpoints += bp
             return bp
         }
-        val bp = Breakpoint(breakpoints.size + 1, file, line)
+        val bp = Breakpoint(breakpoints.size + 1, file, line, condition)
         breakpoints += bp
         return bp
     }
@@ -264,6 +304,32 @@ class DebugController(
 
     /** 执行任意 lldb 命令（给控制台用） */
     suspend fun sendCommand(cmd: String): String = driver.send(cmd)
+
+    /**
+     * 表达式求值 / 修改变量。
+     * 例如 `a + b` 求值，或 `x = 5` 直接改变量值（需要程序已暂停）。
+     * 返回精简后的结果（去掉 lldb 的 `(type) $0 = ` 前缀）。
+     */
+    suspend fun evaluate(expr: String): String {
+        val e = expr.trim()
+        if (e.isEmpty()) return ""
+        val out = driver.send("expression -- $e", timeoutMs = 30_000)
+        return cleanEval(out)
+    }
+
+    private fun cleanEval(raw: String): String {
+        val lines = raw.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.isEmpty()) return "（无输出）"
+        for (l in lines) {
+            val m = evalPrefixRegex.find(l)
+            if (m != null) {
+                val v = m.groupValues[1].trim()
+                return if (v.isEmpty()) "（空）" else v
+            }
+        }
+        // 没有 "(type) $0 = value" 形式，多半是错误信息，原样返回
+        return lines.joinToString("\n")
+    }
 
     fun stop() {
         driver.stop()

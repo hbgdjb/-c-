@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.redpanda.cppide.BuildConfig
 
 /** 打开浏览器 */
 private fun openUrl(context: android.content.Context, url: String) {
@@ -63,10 +64,16 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     .verticalScroll(rememberScrollState())
             ) {
                 Text("小熊猫C++ 安卓版", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("版本 1.0  ·  包名 com.redpanda.cppide", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "一个内置完整 C/C++ 编译器的安卓原生 IDE，完全离线可用。",
+                    "版本 ${BuildConfig.VERSION_NAME}  ·  包名 com.redpanda.cppide",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "内置完整 C/C++ 编译器（clang 21 + lldb 调试器 + clangd）的安卓原生 IDE，" +
+                        "装上就能写代码、编译、运行、调试，全程离线可用。\n" +
+                        "支持实时语法诊断、跳转定义 / 查找引用 / 重命名符号、断点可视化、" +
+                        "表达式求值与 lldb 命令调试。",
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )

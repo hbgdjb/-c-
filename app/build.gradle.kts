@@ -23,8 +23,8 @@ android {
         // targetSdk 28：规避 Android 10+ 对应用私有目录文件的执行限制（W^X），
         // 否则无法在 filesDir 下 exec clang 及编译产物。侧载场景无 Play 商店限制。
         targetSdk = 28
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 10
+        versionName = "1.9"
 
         ndk {
             abiFilters += "arm64-v8a"
@@ -70,6 +70,8 @@ android {
 
     buildFeatures {
         compose = true
+        // 生成 BuildConfig，供「关于」页读取版本号（避免手写版本过期）
+        buildConfig = true
     }
 
     androidResources {

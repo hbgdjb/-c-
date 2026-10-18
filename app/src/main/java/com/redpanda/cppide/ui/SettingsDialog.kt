@@ -47,10 +47,12 @@ fun SettingsDialog(
     options: CompileOptions,
     themeMode: String,
     fontSize: Float,
+    diagOn: Boolean,
+    wrapOn: Boolean,
     storage: StorageManager,
     onAbout: () -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (CompileOptions, String, Float) -> Unit
+    onConfirm: (CompileOptions, String, Float, Boolean, Boolean) -> Unit
 ) {
     var stdCpp by remember { mutableStateOf(options.stdCpp) }
     var stdC by remember { mutableStateOf(options.stdC) }
@@ -59,6 +61,8 @@ fun SettingsDialog(
     var multi by remember { mutableStateOf(options.multiFile) }
     var theme by remember { mutableStateOf(themeMode) }
     var font by remember { mutableFloatStateOf(fontSize) }
+    var diag by remember { mutableStateOf(diagOn) }
+    var wrap by remember { mutableStateOf(wrapOn) }
     var storageTick by remember { mutableStateOf(0) }
     var helpPage by remember { mutableStateOf<HelpPage?>(null) }
 
@@ -131,6 +135,28 @@ fun SettingsDialog(
                 MiniHint(
                     if (multi) "多文件：编译当前文件夹内所有同类型源文件并链接成一个程序"
                     else "单文件：只编译当前打开的这个文件"
+                )
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+
+                // ───────── 编辑器 ─────────
+                SectionTitle("编辑器")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = diag, onCheckedChange = { diag = it })
+                    Text("实时语法诊断（打字时标红）", fontSize = 12.sp)
+                }
+                MiniHint(
+                    if (diag) "边写边用 clangd 检查，错误画红色波浪线、警告画黄色；点波浪线可看说明"
+                    else "已关闭：打字时不做实时检查，可省电、省内存"
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = wrap, onCheckedChange = { wrap = it })
+                    Text("自动换行", fontSize = 12.sp)
+                }
+                MiniHint(
+                    if (wrap) "长代码行自动折行显示，手机上不用左右拖动"
+                    else "长代码行横向滚动（默认）"
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -220,7 +246,9 @@ fun SettingsDialog(
                         multiFile = multi
                     ),
                     theme,
-                    font
+                    font,
+                    diag,
+                    wrap
                 )
             }) { Text("确定") }
         },

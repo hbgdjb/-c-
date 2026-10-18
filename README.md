@@ -4,20 +4,25 @@
 
 **内置完整 C/C++ 编译器**（clang 21 + lld + lldb 调试器 + clangd），装上就能写代码、编译、运行、调试 —— 不需要联网、不需要 Termux、不需要 root。
 
+当前版本 **v1.9**（`versionCode 10`），`minSdk 24` / `targetSdk 28` / `arm64-v8a`。
+
 ---
 
 ## 功能
 
 | 分类 | 功能 |
 |---|---|
-| **编辑** | C/C++ 语法高亮（TextMate）、多标签页、**代码片段**（22 个常用模板）、**输入补全**（关键字 + 片段触发词 + 文档标识符）、**查找/替换**（支持大小写敏感与正则）、**竖排/横排符号快捷输入栏**、注释/缩进/撤销/重做、**自动格式化**（按大括号层级重新缩进） |
-| **编译运行** | 一键编译运行 / 仅编译、**单文件与多文件编译**、控制台实时输出、**stdin 输入**、**编译错误点击跳转** |
-| **调试** | **断点**（步入/步过/步出/继续）、**变量查看**、**调用栈**、调试编译自动加 `-g` |
-| **代码导航** | **跳转定义**（clangd 实现，支持本文件 / 同目录 / 系统头文件） |
-| **文件管理** | **文件树**（目录展开、新建文件/文件夹、重命名、删除） |
-| **界面** | **竖屏 / 横屏两套布局**（横屏为左右分屏：竖排工具栏 + 编辑器 + 侧面板）、亮/暗/跟随系统配色、字体大小调节 |
+| **编辑** | C/C++ 语法高亮（TextMate）、多标签页、**代码片段**（22 个常用模板）、**输入补全**（关键字 + 片段触发词 + 文档标识符）、**查找/替换**（支持大小写敏感与正则）、**竖排/横排符号快捷输入栏**、注释/缩进/撤销/重做、**自动格式化**（按大括号层级重新缩进）、**自动换行**开关 |
+| **代码智能** | **实时语法诊断**（边写边用 clangd 检查，错误红波浪线 / 警告黄波浪线）、**跳转定义**、**查找引用**、**重命名符号**（可跨文件）、**悬停显示类型/签名**、**编译错误点击跳转** |
+| **调试** | **断点可视化**（行号旁红点）+ **条件断点**、继续 / 步过 / 步入 / 步出、**变量查看**、**调用栈**、**表达式求值与改变量**、**原始 lldb 命令控制台**、**程序输出面板**；调试编译自动加 `-g` |
+| **编译运行** | 一键编译运行 / 仅编译、**单文件与多文件编译**、控制台实时输出、**stdin 输入** |
+| **任务与书签** | **TODO / FIXME / XXX / HACK 自动收集**（点击跳转）、**书签**（添加 / 删除 / 快速跳回） |
+| **文件管理** | **文件树**（目录展开、新建文件/文件夹、重命名、删除）、**代码导入 / 导出 / 分享**（SAF，无需存储权限） |
+| **持久化** | **每 30 秒自动保存**、标题栏未保存标记 `*`、代码模板 |
+| **界面** | **竖屏 / 横屏两套布局**（横屏为左右分屏：竖排工具栏 + 编辑器 + 侧面板）、亮/暗/跟随系统配色、字体大小调节、**软键盘 / 调试时自动收起底部栏** |
 | **存储** | 占用明细 + 一键清理编译产物与临时文件 |
 | **自检** | 一键检测编译器 / 运行 / 调试器是否可用 |
+| **关于** | 原作来源、许可、第三方组件与联系方式（版本号自动读取，不会过期） |
 
 ---
 
@@ -84,11 +89,11 @@ RedPandaAndroid/
 │   ├── compiler/                  ToolchainManager / Compiler / ProgramRunner
 │   ├── debugger/                  LldbDriver / DebugController（LLDB 交互）
 │   ├── navigator/                 ClangdClient / NavigationController（LSP）
-│   ├── editor/                    EditorActions / CppCompletionLanguage
-│   ├── workspace/                 Workspace / TemplateManager / StorageManager
+│   ├── editor/                    EditorActions / CppCompletionLanguage / BreakpointOverlay
+│   ├── workspace/                 Workspace / TemplateManager / StorageManager / FileSharing
 │   └── ui/                        Theme / EditorBars / FindReplacePanel / FileTreePanel /
 │                                  SettingsDialog / AboutDialog / SnippetPanel /
-│                                  DebugPanel / SelfCheckDialog
+│                                  DebugPanel / TasksDialog / SelfCheckDialog
 ├── app/src/main/assets/           toolchain / templates / textmate
 └── app/src/main/res/              图标 / 主题 / 字符串 / 备份规则
 ```
